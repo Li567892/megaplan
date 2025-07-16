@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Редактор поля "Марка / Модель"</title>
+</head>
+<body>
+  <h2>Редактор кастомного поля program=61</h2>
+
+  <div id="form-container">
+    <label for="brand">Марка:</label>
+    <select id="brand" onchange="updateModels()">
+      <option value="">-- Выберите марку --</option>
+      <option value="Audi">Audi</option>
+      <option value="Volvo">Volvo</option>
+      <option value="Lada">Lada</option>
+    </select>
+
+    <label for="model">Модель:</label>
+    <select id="model">
+      <option>-- Сначала выберите марку --</option>
+    </select>
+
+    <button onclick="addSelection()">Добавить</button>
+    <hr>
+
+    <ul id="selected-list"></ul>
+    <button onclick="saveData()">Сохранить изменения</button>
+  </div>
+
+  <script>
+    const dealId = 2916;
+    const fieldId = 'program=61';
+    const token = 'ODI0MjZmZGM0Yzg0NzFiODVmMDMwYWZlN2YxZjMyODM5NzFmNzgzMzVkMDNkMzM4MGU3MmNlNmViYzJkM2Y3Mg';
+
+    let selectedValues = [];
+
+    const modelsMap = {
+      Audi: ['A1', 'A3', 'Q5', 'Q7'],
+      Volvo: ['XC60', 'XC90', 'V40', 'C30'],
+      Lada: ['Vesta', 'Granta', 'Aura', 'Priora']
+    };
+
+    async function fetchData() {
+      const res = await fetch(`https://demo23.megaplan.ru/BumsCommonApiV01/Deal/card.api?Id=${dealId}`, {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+      const data = await res.json();
+      const fieldValue = data.Data.CustomFields[fieldId] || [];
+      selectedValues = [...fieldValue];
+      renderList();
+    }
+
+    function updateModels() {
+      const brand = document.getElementById('brand').value;
+      const modelSelect = document.getElementById('model');
+      modelSelect.innerHTML = '';
+      if (!brand) {
+        modelSelect.innerHTML = '<option>-- Сначала выберите марку --</option>';
+        return;
+      }
+      modelsMap[brand].forEach(model => {
+        const opt = document.createElement('option');
+        opt.value = model;
+        opt.textContent = model;
+        modelSelect.appendChild(opt);
+      });
+    }
+
+    function addSelection() {
+      const brand = document.getElementById('brand').value;
+      const model = document.getElementById('model').value;
+      if (!brand || !model) {
+        alert("Выберите марку и модель");
+        return;
+      }
+      selectedValues.push({ Brand: brand, Model: model });
+      renderList();
+    }
+
+    function renderList() {
+      const list = document.getElementById('selected-list');
+      list.innerHTML = '';
+      selectedValues.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.textContent = ${item.Brand} - ${item.Model};
+        const btn = document.createElement('button');
+        btn.textContent = 'X';
+        btn.onclick = () => {
+          selectedValues.splice(index, 1);
+          renderList();
+        };
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+    }
+
+    async function saveData() {
+      const res = await fetch(' https://demo23.megaplan.ru/BumsCommonApiV01/Deal/update.api ', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Id: dealId,
+          CustomFields: {
+            [fieldId]: selectedValues
+          }
+        })
+      });
+
+      const result = await res.json();
+      alert(res.ok ? 'Данные успешно сохранены' : 'Ошибка сохранения: ' + JSON.stringify(result));
+    }
+
+    // Инициализация
+    fetchData();
+  </script>
+</body>
+</html>
